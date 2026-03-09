@@ -1,4 +1,5 @@
 import platform
+import subprocess
 import tempfile
 import time
 
@@ -710,3 +711,39 @@ def test_flag_value_prompt(
         assert result.output == expected_output
         assert not result.stderr
         assert result.exit_code == 0 if expected not in (REPEAT, INVALID) else 1
+
+
+def test_open_url_windows_locate_quotes_path(monkeypatch):
+    calls = []
+
+    def fake_call(args):
+        calls.append(args)
+        return 0
+
+    monkeypatch.setattr(click._termui_impl, "WIN", True)
+    monkeypatch.setattr(click._termui_impl, "CYGWIN", False)
+    monkeypatch.setattr(subprocess, "call", fake_call)
+
+    url = r"C:\Users\Public\click demo\f.txt"
+    rv = click._termui_impl.open_url(url, locate=True)
+
+    assert rv == 0
+    assert calls == [["explorer", '/select,"C:\\Users\\Public\\click demo\\f.txt"']]
+
+
+def test_open_url_windows_locate_escapes_quotes(monkeypatch):
+    calls = []
+
+    def fake_call(args):
+        calls.append(args)
+        return 0
+
+    monkeypatch.setattr(click._termui_impl, "WIN", True)
+    monkeypatch.setattr(click._termui_impl, "CYGWIN", False)
+    monkeypatch.setattr(subprocess, "call", fake_call)
+
+    url = r'C:\Users\Public\click "demo"\f.txt'
+    rv = click._termui_impl.open_url(url, locate=True)
+
+    assert rv == 0
+    assert calls == [["explorer", '/select,"C:\\Users\\Public\\click ""demo""\\f.txt"']]
